@@ -276,3 +276,28 @@ func (ecs *ECS) GetCpuAndMemoryFromTaskDefinition(taskDefinitionArn string) (str
 
 	return aws.StringValue(taskDefinition.Cpu), aws.StringValue(taskDefinition.Memory)
 }
+
+func (ecs *ECS) AddDockerLabelsToECSTaskDefinition(taskDefinitionArn string, dockerLabels map[string]*string) string {
+	taskDefinition := ecs.DescribeTaskDefinition(taskDefinitionArn)
+
+	taskDefinition.ContainerDefinitions[0].DockerLabels = dockerLabels
+
+	resp, err := ecs.svc.RegisterTaskDefinition(
+		&awsecs.RegisterTaskDefinitionInput{
+			ContainerDefinitions:    taskDefinition.ContainerDefinitions,
+			Cpu:                     taskDefinition.Cpu,
+			ExecutionRoleArn:        taskDefinition.ExecutionRoleArn,
+			Family:                  taskDefinition.Family,
+			Memory:                  taskDefinition.Memory,
+			NetworkMode:             taskDefinition.NetworkMode,
+			RequiresCompatibilities: taskDefinition.RequiresCompatibilities,
+			TaskRoleArn:             taskDefinition.TaskRoleArn,
+		},
+	)
+
+	if err != nil {
+		console.ErrorExit(err, "Could not register ECS task definition")
+	}
+
+	return aws.StringValue(resp.TaskDefinition.TaskDefinitionArn)
+}
